@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+build/
+.env*
+!.env.example
+*.log
+.DS_Store
+.vercel
+*.tsbuildinfo
+playwright-report/
+test-results/
+Claude outputs/
+ci-logs/
+backups/
+setup/*.bundle
+setup/commit-id.txt

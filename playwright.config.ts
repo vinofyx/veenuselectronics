@@ -1,0 +1,29 @@
+import { defineConfig, devices } from "@playwright/test";
+
+/**
+ * End-to-end tests. Run against a TEST Supabase project, never production:
+ *   npm run build && npm run test:e2e
+ * Set E2E_BASE_URL to test an already-running site (e.g. a Vercel preview URL).
+ * Admin tests need E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD (+ E2E_STAFF_* for permission tests).
+ */
+const baseURL = process.env.E2E_BASE_URL || "http://localhost:3000";
+
+export default defineConfig({
+  testDir: "./tests/e2e",
+  timeout: 45_000,
+  fullyParallel: false, // the enquiry tests share a per-IP rate limit
+  retries: process.env.CI ? 1 : 0,
+  reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
+  use: { baseURL, trace: "retain-on-failure", screenshot: "only-on-failure" },
+  webServer: process.env.E2E_BASE_URL
+    ? undefined
+    : { command: "npm run start", url: baseURL, reuseExistingServer: true, timeout: 120_000 },
+  // Viewports from the production-verification brief.
+  projects: [
+    { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1920, height: 1080 } } },
+    { name: "laptop", use: { ...devices["Desktop Chrome"], viewport: { width: 1366, height: 768 } } },
+    { name: "tablet", use: { ...devices["Desktop Chrome"], viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true } },
+    { name: "android", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } } },
+    { name: "iphone", use: { ...devices["iPhone 13 mini"], viewport: { width: 375, height: 812 } } },
+  ],
+});

@@ -1,0 +1,122 @@
+name: CI
+
+# Real production verification on every push and pull request:
+# install -> typecheck -> lint -> unit/API tests -> database security tests ->
+# production build -> Playwright browser tests (5 viewports) -> reports as artifacts.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_SITE_URL: https://ci.veenus.invalid
+      RATE_LIMIT_SALT: ci-only-salt-not-secret
+      # ---- CI TEST FIXTURES (not real business details; used only so the Call/WhatsApp
+      # ---- buttons render and their links can be tested. Never used in production.)
+      NEXT_PUBLIC_BUSINESS_PHONE: "+919000000000"
+      NEXT_PUBLIC_BUSINESS_PHONE_DISPLAY: "+91 90000 00000"
+      NEXT_PUBLIC_WHATSAPP_NUMBER: "919000000000"
+      # ---- Optional TEST Supabase project (never production) for backend e2e tests ----
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.TEST_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
+      E2E_WITH_BACKEND: ${{ secrets.TEST_SUPABASE_URL != '' && '1' || '' }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      E2E_STAFF_EMAIL: ${{ secrets.E2E_STAFF_EMAIL }}
+      E2E_STAFF_PASSWORD: ${{ secrets.E2E_STAFF_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          # npm cache needs a lockfile; skip caching until package-lock.json is committed.
+          cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Install dependencies (lockfile)
+        shell: bash
+        run: |
+          mkdir -p ci-logs
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund 2>&1 | tee ci-logs/install.log
+          else
+            echo "::warning::No package-lock.json - running npm install. Download the 'package-lock' artifact and commit it."
+            npm install --no-audit --no-fund 2>&1 | tee ci-logs/install.log
+          fi
+          exit ${PIPESTATUS[0]}
+
+      - name: Dependency audit (fails on critical)
+        shell: bash
+        run: |
+          npm audit --omit=dev 2>&1 | tee ci-logs/npm-audit.log || true
+          npm audit --omit=dev --audit-level=critical
+
+      - name: TypeScript
+        shell: bash
+        run: npm run typecheck 2>&1 | tee ci-logs/typecheck.log; exit ${PIPESTATUS[0]}
+
+      - name: ESLint
+        shell: bash
+        run: npm run lint 2>&1 | tee ci-logs/lint.log; exit ${PIPESTATUS[0]}
+
+      - name: Unit + API tests
+        shell: bash
+        run: npm test 2>&1 | tee ci-logs/unit-tests.log; exit ${PIPESTATUS[0]}
+
+      - name: Database migrations + RLS security tests (PostgreSQL)
+        shell: bash
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql >/dev/null
+          export PATH="$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1):$PATH"
+          bash scripts/test-db.sh 2>&1 | tee ci-logs/database-tests.log; exit ${PIPESTATUS[0]}
+
+      - name: Next.js production build
+        shell: bash
+        run: npm run build 2>&1 | tee ci-logs/build.log; exit ${PIPESTATUS[0]}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Playwright end-to-end tests (5 viewports)
+        shell: bash
+        run: npm run test:e2e 2>&1 | tee ci-logs/e2e.log; exit ${PIPESTATUS[0]}
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs
+          path: ci-logs/
+          retention-days: 30
+
+      - name: Upload Playwright report + screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
+      - name: Upload generated lockfile
+        if: always() && hashFiles('package-lock.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json
+          retention-days: 30

@@ -1,0 +1,6 @@
+Update Veenus Electronics website
+
+Next.js + Supabase TV repair website, tests and CI workflow.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LDsUCBH13y789t7DvEMuYe
