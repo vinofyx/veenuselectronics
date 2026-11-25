@@ -1,10 +1,9 @@
 /**
  * Business details model - safe to import from server AND client code.
  *
- * Source of truth, in order:
- *   1. Admin → Business details (Supabase table `business_settings`)
- *   2. NEXT_PUBLIC_* environment variables (fallback / initial values)
- *   3. Empty → the website hides whatever depends on that value.
+ * Source of truth:
+ *   1. NEXT_PUBLIC_* environment variables (production verified values)
+ *   2. Empty / Unset → the website hides whatever depends on that value.
  * Nothing is invented: there are no hard-coded phone numbers, addresses or claims.
  */
 import { BRANDS, EQUIPMENT_TYPES } from "@/lib/constants";

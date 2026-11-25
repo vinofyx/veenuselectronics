@@ -4,7 +4,7 @@ import path from "node:path";
 /**
  * Call / WhatsApp buttons, contact page, booking page, and screenshots.
  * In CI the business phone/WhatsApp come from clearly-marked test fixtures in the workflow env.
- * Locally, configure them in Admin -> Business details (or env) first; otherwise these tests skip.
+ * Locally, configured via environment variables or business config; otherwise these tests skip.
  */
 
 test.describe("Call and WhatsApp buttons", () => {

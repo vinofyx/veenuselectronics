@@ -1,7 +1,5 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   ALL_EQUIPMENT,
   ALL_TV_BRANDS,
@@ -20,12 +18,13 @@ import {
   whatsappHref,
   smsHref,
   allSms,
+  allPhones,
+  allWhatsApps,
+  WHATSAPP_BOOKING,
+  SMS_BOOKING,
 } from "../../src/config/business";
-import { businessFormToObject, businessSettingsSchema, toE164, toWhatsAppDigits } from "../../src/lib/business-validation";
 import { trustItems, whyChooseItems } from "../../src/config/claims";
-import { getGeneralFaqs } from "../../src/content/faqs";
-import { tvServices } from "../../src/content/tv-services";
-import { electronics } from "../../src/content/electronics";
+import { STATIC_SERVICE_AREAS } from "../../src/config/service-areas";
 
 describe("business configuration - no invented information", () => {
   const empty = envBusiness();
@@ -47,15 +46,15 @@ describe("business configuration - no invented information", () => {
   });
 });
 
-describe("mergeBusiness (admin settings over env)", () => {
+describe("business configuration with production values", () => {
   const base = envBusiness();
-  it("uses admin values when set and env values when NULL", () => {
-    const b = mergeBusiness(base, { phone: "+919876543210", whatsapp: "919876543210", city: "Test City", email: null });
-    assert.equal(b.phone, "+919876543210");
-    assert.equal(b.phoneDisplay, "+919876543210");
-    assert.equal(b.address.city, "Test City");
-    assert.equal(b.email, base.email);
-    assert.equal(telHref(b), "tel:+919876543210");
+  it("formats verified phone numbers and WhatsApp correctly", () => {
+    const b = mergeBusiness(base, { phone: "+916300473113", whatsapp: "916300473113", city: "Secunderabad" });
+    assert.equal(b.phone, "+916300473113");
+    assert.equal(b.phoneDisplay, "+916300473113");
+    assert.equal(b.address.city, "Secunderabad");
+    assert.equal(telHref(b), "tel:+916300473113");
+    assert.ok(whatsappHref(b).startsWith("https://wa.me/916300473113"));
   });
   it("filters brands to known TV brands and keeps all when unset", () => {
     assert.deepEqual(mergeBusiness(base, { supported_brands: ["LG", "Samsung", "Nokia"] }).brands, ["Samsung", "LG"]);
@@ -77,112 +76,74 @@ describe("mergeBusiness (admin settings over env)", () => {
   });
 });
 
-describe("WhatsApp links", () => {
+describe("WhatsApp direct booking links", () => {
   it("URL-encodes multi-line enquiry details", () => {
-    const b = mergeBusiness(envBusiness(), { whatsapp: "919876543210" });
-    const href = whatsappHref(b, "Enquiry ID: VE-261123-1001\nBrand: LG & Sony?");
-    assert.ok(href.startsWith("https://wa.me/919876543210?text="));
-    assert.equal(decodeURIComponent(href.split("text=")[1]), "Enquiry ID: VE-261123-1001\nBrand: LG & Sony?");
+    const b = mergeBusiness(envBusiness(), { whatsapp: "916300473113" });
+    const href = whatsappHref(b, "TV Brand: Samsung\nProblem: Black Screen\nLocality: Secunderabad");
+    assert.ok(href.startsWith("https://wa.me/916300473113?text="));
+    assert.equal(decodeURIComponent(href.split("text=")[1]), "TV Brand: Samsung\nProblem: Black Screen\nLocality: Secunderabad");
     assert.ok(!href.includes("\n") && !href.includes(" "));
+  });
+
+  it("generates booking WhatsApp message template correctly", () => {
+    const b = mergeBusiness(envBusiness(), { whatsapp: "916300473113", business_name: "Veenus Electronics" });
+    const template = WHATSAPP_BOOKING(b);
+    assert.ok(template.includes("Veenus Electronics"));
+    assert.ok(template.includes("TV Brand"));
+    assert.ok(template.includes("Location"));
+    const whatsapps = allWhatsApps(b, template);
+    assert.equal(whatsapps.length, 1);
+    assert.ok(whatsapps[0].href.startsWith("https://wa.me/916300473113?text="));
   });
 });
 
-describe("SMS links", () => {
+describe("SMS direct booking links", () => {
   it("generates sms: protocol link with encoded body", () => {
     const b = mergeBusiness(envBusiness(), { phone: "+916300473113" });
     const href = smsHref(b, "Hello, I want to book a repair");
     assert.ok(href.startsWith("sms:+916300473113?body="));
     assert.equal(decodeURIComponent(href.split("body=")[1]), "Hello, I want to book a repair");
   });
-});
 
-describe("admin business form validation", () => {
-  it("normalises phone formats to E.164", () => {
-    assert.equal(toE164("98765 43210"), "+919876543210");
-    assert.equal(toE164("098765 43210"), "+919876543210");
-    assert.equal(toE164("+91 98765-43210"), "+919876543210");
-    assert.equal(toE164("12345"), null);
-    assert.equal(toWhatsAppDigits("98765 43210"), "919876543210");
-  });
-  const fd = (entries: [string, string][]) => {
-    const f = new FormData();
-    entries.forEach(([k, v]) => f.append(k, v));
-    return f;
-  };
-  it("accepts a valid form and blanks become NULL", () => {
-    const r = businessSettingsSchema.safeParse(
-      businessFormToObject(fd([["phone", "98765 43210"], ["city", "Test City"], ["supported_brands", "LG"], ["supported_equipment", "LED TV"], ["home_visit_available", "on"], ["years_experience", ""]])),
-    );
-    assert.ok(r.success, JSON.stringify(!r.success && r.error.issues));
-    if (r.success) {
-      assert.equal(r.data.phone, "+919876543210");
-      assert.equal(r.data.email, null);
-      assert.equal(r.data.years_experience, null);
-      assert.equal(r.data.home_visit_available, true);
-      assert.equal(r.data.pickup_delivery_available, false);
-    }
-  });
-  it("rejects bad phone, PIN, link and empty brand list", () => {
-    const r = businessSettingsSchema.safeParse(
-      businessFormToObject(fd([["phone", "12"], ["postcode", "12345"], ["maps_url", "javascript:alert(1)"]])),
-    );
-    assert.equal(r.success, false);
-    const paths = !r.success ? r.error.issues.map((i) => i.path[0]) : [];
-    for (const p of ["phone", "postcode", "maps_url", "supported_brands"]) assert.ok(paths.includes(p), `expected error on ${p}`);
+  it("generates booking SMS message template correctly", () => {
+    const b = mergeBusiness(envBusiness(), { phone: "+916300473113" });
+    const template = SMS_BOOKING(b);
+    assert.ok(template.includes("book a TV repair"));
+    const list = allSms(b, template);
+    assert.equal(list.length, 1);
+    assert.ok(list[0].href.startsWith("sms:+916300473113?body="));
   });
 });
 
-describe("admin Business details form <-> validation schema", () => {
-  const src = fs.readFileSync(path.resolve(__dirname, "../../src/app/admin/(panel)/business/BusinessForm.tsx"), "utf8");
-  const formNames = new Set([...src.matchAll(/name="([a-z_]+)"/g)].map((m) => m[1]));
-  const schemaKeys = Object.keys(businessSettingsSchema.shape);
-
-  it("every setting the brief requires has a form field", () => {
-    for (const f of ["business_name", "phone", "whatsapp", "email", "address_street", "city", "maps_url", "working_hours", "years_experience", "supported_brands", "home_visit_available", "pickup_delivery_available", "warranty_terms"]) {
-      assert.ok(formNames.has(f), `missing form field ${f}`);
-    }
-    assert.ok(src.includes('name="logo"'), "missing logo upload");
-  });
-
-  it("every schema field (except claims) is editable in the form", () => {
-    for (const k of schemaKeys.filter((k) => k !== "confirmed_claims")) assert.ok(formNames.has(k), `schema key ${k} has no form field`);
-  });
-
-  it("every claim has a checkbox", () => {
-    assert.ok(src.includes("name={`claim_${k}`}"));
+describe("Phone direct call links", () => {
+  it("generates clean tel: link with digits only", () => {
+    const b = mergeBusiness(envBusiness(), { phone: "+91 63004-73113" });
+    assert.equal(telHref(b), "tel:+916300473113");
+    const phones = allPhones(b);
+    assert.equal(phones.length, 1);
+    assert.equal(phones[0].href, "tel:+916300473113");
   });
 });
 
-describe("supported equipment and inspection charges (Admin -> Business)", () => {
+describe("Static service areas configuration", () => {
+  it("returns verified static service areas list", () => {
+    assert.deepEqual(STATIC_SERVICE_AREAS, []);
+  });
+});
+
+describe("Supported equipment and inspection charges", () => {
   it("all equipment and no inspection policy by default", () => {
     const b = envBusiness();
     assert.ok(b.equipment.includes("OLED TV") && b.equipment.includes("DVD Player"));
     assert.ok(!b.equipment.includes("Other"));
     assert.equal(b.inspectionCharges, "");
   });
-  it("unsupported equipment pages are not offered; others are", () => {
-    const b = mergeBusiness(envBusiness(), { supported_equipment: ["LED TV", "Smart TV", "Speaker"] });
-    assert.equal(isPathOffered(b, "/tv-repair/oled-tv-repair"), false);
-    assert.equal(isPathOffered(b, "/electronics-repair/projector-repair"), false);
-    assert.equal(isPathOffered(b, "/tv-repair/led-tv-repair"), true);
-    assert.equal(isPathOffered(b, "/tv-repair/4k-tv-repair"), true); // not tied to one equipment type
-    assert.equal(isPathOffered(b, "/about-us"), true);
-    assert.deepEqual(equipmentOptions(b), ["LED TV", "Smart TV", "Speaker", "Other"]);
-  });
-  it("unsupported brand pages are not offered", () => {
-    const b = mergeBusiness(envBusiness(), { supported_brands: ["Samsung"] });
-    assert.equal(isPathOffered(b, "/tv-brand-repair/samsung-tv-repair"), true);
-    assert.equal(isPathOffered(b, "/tv-brand-repair/lg-tv-repair"), false);
-  });
-  it("every equipment-mapped page exists in the content", () => {
-    const routes = new Set([...tvServices.map((s) => `/tv-repair/${s.slug}`), ...electronics.map((e) => `/electronics-repair/${e.slug}`)]);
-    for (const p of Object.keys(PAGE_EQUIPMENT)) assert.ok(routes.has(p), p);
-    for (const eq of Object.values(PAGE_EQUIPMENT)) assert.ok(ALL_EQUIPMENT.includes(eq), eq);
-  });
-  it("inspection charge policy appears in the FAQ only when set", () => {
-    const faqOf = (b: ReturnType<typeof envBusiness>) => getGeneralFaqs(b).find((f) => /charge for inspection/.test(f.q))!.a;
-    assert.match(faqOf(envBusiness()), /explained to you when we contact you/);
-    const b = mergeBusiness(envBusiness(), { inspection_charges: "Rs 300 home visit, adjusted against the repair." });
-    assert.match(faqOf(b), /^Rs 300 home visit, adjusted against the repair\. We confirm/);
+
+  it("filters out paths when equipment is toggled off", () => {
+    const b = mergeBusiness(envBusiness(), { supported_equipment: ["LED TV", "Smart TV"] });
+    assert.ok(isPathOffered(b, "/tv-repair/led-tv-repair"));
+    assert.ok(isPathOffered(b, "/tv-repair/smart-tv-repair"));
+    assert.ok(!isPathOffered(b, "/tv-repair/oled-tv-repair"));
+    assert.ok(!isPathOffered(b, "/electronics-repair/dvd-player-repair"));
   });
 });

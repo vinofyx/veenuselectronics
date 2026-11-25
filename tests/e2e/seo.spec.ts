@@ -53,11 +53,12 @@ test("sitemap and robots", async ({ request }) => {
   for (const p of ["/tv-repair/led-tv-repair", "/tv-problems/tv-screen-repair", "/tv-brand-repair/samsung-tv-repair"]) expect(xml).toContain(p);
   expect(xml).not.toContain("/admin");
   const robots = await (await request.get("/robots.txt")).text();
-  expect(robots).toContain("Disallow: /admin");
+  expect(robots).toContain("Allow: /");
   expect(robots).toContain("Sitemap:");
+  expect(robots).not.toContain("Disallow: /admin");
 });
 
-test("admin pages are noindex", async ({ request }) => {
+test("removed admin routes return 404", async ({ request }) => {
   const res = await request.get("/admin/login");
-  expect(res.headers()["x-robots-tag"]).toContain("noindex");
+  expect(res.status()).toBe(404);
 });

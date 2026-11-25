@@ -73,17 +73,6 @@ export type EnquiryStatus = (typeof STATUSES)[number];
 
 export const TV_EQUIPMENT = new Set<string>(["LED TV", "LCD TV", "Smart TV", "OLED TV", "QLED TV", "Android TV"]);
 
-export const ADMIN_ROLES = ["admin", "staff"] as const;
-export type AdminRole = (typeof ADMIN_ROLES)[number];
-
-export const MAX_PHOTOS = 4;
-export const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5 MB each, as received by the server
-/** Largest original photo a customer may pick; it is compressed in the browser before upload. */
-export const MAX_RAW_PHOTO_BYTES = 15 * 1024 * 1024;
-/** Vercel limits request bodies to ~4.5 MB, so the total upload is kept under this. */
-export const MAX_TOTAL_UPLOAD_BYTES = 4 * 1024 * 1024;
-export const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
-
 export const STATUS_STYLES: Record<EnquiryStatus, string> = {
   New: "bg-blue-100 text-blue-800",
   Contacted: "bg-indigo-100 text-indigo-800",

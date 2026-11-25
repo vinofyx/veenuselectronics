@@ -75,7 +75,7 @@ describe("navigation and internal links", () => {
           const src = fs.readFileSync(p, "utf8");
           for (const m of src.matchAll(/href=["{]\s*["`]?(\/[a-z0-9\-/]*)["`]/g)) {
             const h = m[1].replace(/\/$/, "") || "/";
-            if (h.startsWith("/admin") || h.startsWith("/api")) continue;
+            if (h.startsWith("/api")) continue;
             if (!routes.has(h)) broken.push(`${path.relative(ROOT, p)}: ${h}`);
           }
         }

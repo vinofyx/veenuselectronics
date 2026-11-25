@@ -72,7 +72,7 @@ export default async function PrivacyPage() {
 
           <h2>6. Sharing</h2>
           <p>
-            We use service providers to run this website and our records - website hosting, database and storage (Supabase) and,
+            We use service providers to run this website and our records - website hosting (Vercel) and,
             if enabled, Google Analytics. They act on our instructions. We may disclose information if required by law.
           </p>
 

@@ -1,7 +1,7 @@
 /**
  * Static site settings (not business facts).
  * Business details - phone, WhatsApp, address, hours, brands, warranty... - live in
- * src/config/business.ts and are editable in Admin → Business details.
+ * src/config/business.ts and verified business settings.
  */
 
 const env = (v: string | undefined) => (v ?? "").trim();
@@ -19,7 +19,7 @@ function resolveSiteUrl(): string {
 }
 
 export const site = {
-  /** Default brand name; the admin can override the displayed name in Business details. */
+  /** Default brand name from business details. */
   name: "Veenus Electronics",
   tagline: "Expert TV Repair and Electronics Service",
   primarySpeciality: "LED, LCD and Smart TV Repair",

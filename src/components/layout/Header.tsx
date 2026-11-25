@@ -191,7 +191,7 @@ export function Header() {
     }
   };
 
-  // Hide entries for equipment / brands switched off in Admin -> Business details.
+  // Filter entries for supported equipment and brands.
   const nav = mainNav.map((item) => (hasChildren(item) ? { ...item, children: item.children.filter((c) => isPathOffered(b, c.href)) } : item));
   const isActive = (href: string) => (href === "/" ? pathname === "/" : Boolean(pathname?.startsWith(href)));
 

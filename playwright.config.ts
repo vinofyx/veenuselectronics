@@ -1,17 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * End-to-end tests. Run against a TEST Supabase project, never production:
+ * End-to-end tests for Veenus Electronics public website:
  *   npm run build && npm run test:e2e
  * Set E2E_BASE_URL to test an already-running site (e.g. a Vercel preview URL).
- * Admin tests need E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD (+ E2E_STAFF_* for permission tests).
  */
 const baseURL = process.env.E2E_BASE_URL || "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 45_000,
-  fullyParallel: false, // the enquiry tests share a per-IP rate limit
+  fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],

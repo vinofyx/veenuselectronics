@@ -8,7 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { getBusiness } from "@/lib/business";
 import { localBusinessSchema, organizationSchema } from "@/lib/schema";
 
-// Pages are static and refreshed hourly, or immediately when an admin saves business details.
+// Pages are pre-rendered at build time with hourly revalidation.
 export const revalidate = 3600;
 
 export default async function SiteLayout({ children }: { children: ReactNode }) {

@@ -2,7 +2,7 @@ import type { Business } from "./business";
 
 /**
  * Marketing claims for the Trust Bar and "Why Choose Us".
- * Each claim is shown only when confirmed in Admin → Business details
+ * Each claim is shown only when confirmed in business settings
  * (or, for experience and warranty, when those values are filled in).
  */
 type Claim = { title: string; text: string; show: boolean };
