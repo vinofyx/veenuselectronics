@@ -5,7 +5,6 @@ import { buildMetadata } from "@/lib/seo";
 import { getBusiness } from "@/lib/business";
 import { isPathOffered } from "@/config/business";
 import { LandingTemplate } from "@/components/LandingTemplate";
-import { BrandGrid } from "@/components/sections";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -32,16 +31,11 @@ export default async function TvServicePage({ params }: Params) {
     <LandingTemplate
       page={page}
       basePath="/tv-repair"
+      variant="service"
       breadcrumbs={[
         { name: "TV Repair", href: "/tv-repair" },
         { name: page.title, href: `/tv-repair/${page.slug}` },
       ]}
-      extra={
-        <section>
-          <h2 className="mb-4 text-xl font-bold sm:text-2xl">Supported brands</h2>
-          <BrandGrid />
-        </section>
-      }
     />
   );
 }

@@ -17,7 +17,7 @@ export function TrackedLink({ href, event, eventParams, onClick, children, ...re
     onClick?.(e);
   };
 
-  const external = /^(https?:|tel:|mailto:)/.test(href);
+  const external = /^(https?:|tel:|mailto:|sms:)/.test(href);
   if (external) {
     const isWeb = href.startsWith("http");
     return (

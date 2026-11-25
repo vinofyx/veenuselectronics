@@ -5,17 +5,24 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 6rem; /* anchors never land under the sticky header */
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-surface text-ink antialiased;
+    background-color: #f4f7fb;
+    color: #142e4c;
+    @apply antialiased;
+    text-rendering: optimizeLegibility;
   }
   h1, h2, h3, h4 {
-    @apply font-display text-brand-800 tracking-tight;
+    @apply font-display font-bold tracking-tight text-brand-800;
   }
+  h1 { text-wrap: balance; }
+  h2, h3 { text-wrap: balance; }
   :focus-visible {
     @apply outline-none ring-2 ring-accent ring-offset-2;
   }
+  ::selection { background: #ffd2ad; color: #091d33; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
@@ -23,27 +30,117 @@
 }
 
 @layer components {
+  /* ---------- Container side padding (20 / 24 / 32px) ---------- */
+  .container {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .container { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .container { padding-left: 2rem; padding-right: 2rem; }
+  }
+  @media (min-width: 1440px) {
+    .container { max-width: 1440px; }
+  }
+
+  /* ---------- Buttons ---------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 py-2.5 text-[15px] font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60;
   }
-  .btn-accent { @apply btn bg-accent text-white shadow-sm hover:bg-accent-600; }
-  .btn-primary { @apply btn bg-brand text-white hover:bg-brand-800; }
-  .btn-whatsapp { @apply btn bg-whatsapp-700 text-white hover:bg-[#0f7a40]; }
-  .btn-outline { @apply btn border border-brand-200 bg-white text-brand hover:border-brand hover:bg-brand-50; }
-  .btn-ghost-light { @apply btn border border-white/30 bg-white/10 text-white hover:bg-white/20; }
+  .btn-accent {
+    @apply btn bg-accent text-brand-950 shadow-[0_6px_16px_-6px_rgba(255,132,31,0.65)] hover:bg-accent-400 active:scale-[0.98];
+  }
+  .btn-primary {
+    @apply btn bg-brand-800 text-white hover:bg-brand-900 active:scale-[0.98];
+  }
+  .btn-whatsapp {
+    @apply btn bg-[#0F7A40] text-white hover:bg-[#0B6634] active:scale-[0.98];
+  }
+  .btn-outline {
+    @apply btn border border-brand-200 bg-white text-brand-800 hover:border-brand-800 active:scale-[0.98];
+  }
+  .btn-ghost-light {
+    @apply btn border border-white/25 bg-white/[0.06] text-white backdrop-blur-sm hover:border-white/50 hover:bg-white/[0.12] active:scale-[0.98];
+  }
 
-  .card { @apply rounded-2xl border border-brand-100/70 bg-white shadow-card; }
-  .card-hover { @apply card transition-shadow duration-200 hover:shadow-card-hover; }
+  /* ---------- Surfaces ---------- */
+  .card {
+    @apply rounded-2xl border border-brand-100 bg-white shadow-card;
+  }
+  .card-hover {
+    @apply card transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card-hover;
+  }
+  .panel-dark {
+    @apply rounded-3xl bg-brand-900 text-white;
+  }
 
-  .section { @apply py-14 sm:py-20; }
-  .eyebrow { @apply text-xs font-semibold uppercase tracking-[0.14em] text-accent-600; }
+  /* ---------- Layout ---------- */
+  .section {
+    @apply py-16 sm:py-20 lg:py-24;
+  }
+  .section-tight {
+    @apply py-12 sm:py-16;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-accent-600;
+  }
+  .eyebrow::before {
+    content: "";
+    @apply h-px w-6 bg-accent;
+  }
+  .eyebrow-light {
+    @apply eyebrow text-accent-300;
+  }
 
+  /* subtle technical grid used on dark panels */
+  .tech-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .tech-grid-light {
+    background-image:
+      linear-gradient(rgba(16,45,79,0.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16,45,79,0.022) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  /* ---------- Forms ---------- */
   .input {
-    @apply block w-full rounded-lg border border-brand-200 bg-white px-3.5 py-2.5 text-[15px] text-ink placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20;
+    @apply block min-h-[48px] w-full rounded-xl border border-brand-200 bg-white px-4 py-3 text-[15px] text-ink transition-colors placeholder:text-slate-400 hover:border-brand-300 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-600/10;
   }
-  .label { @apply mb-1.5 block text-sm font-medium text-brand-800; }
-  .field-error { @apply mt-1 text-xs font-medium text-red-600; }
+  .input[aria-invalid="true"] {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-500/10;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-brand-800;
+  }
+  .field-error {
+    @apply mt-1.5 text-[13px] font-medium text-red-600;
+  }
 
-  .prose-content p { @apply mb-4 leading-relaxed text-slate-700; }
-  .prose-content ul { @apply mb-4 space-y-2; }
+  /* ---------- Long-form content ---------- */
+  .prose-content p {
+    @apply mb-4 text-base leading-[1.75] text-slate-700 sm:text-[17px];
+  }
+  .prose-content h2 {
+    @apply mb-3 mt-10 text-2xl first:mt-0;
+  }
+  .prose-content h3 {
+    @apply mb-2 mt-6 text-lg;
+  }
+  .prose-content ul {
+    @apply mb-4 list-disc space-y-2 pl-5 text-slate-700 marker:text-accent;
+  }
+  .prose-content a {
+    @apply font-medium text-brand-600 underline decoration-brand-200 underline-offset-4 hover:decoration-accent;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
 }

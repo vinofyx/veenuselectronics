@@ -100,7 +100,7 @@ export const blogPosts: BlogPost[] = [
       },
       {
         heading: "What to send us",
-        body: "Add the model number to the enquiry form, or upload a photo of the label along with a photo of the problem. If the label is unreadable, just tell us the brand and screen size.",
+        body: "Share the model number when you call, or send a photo of the label along with a photo of the problem on WhatsApp. If the label is unreadable, just tell us the brand and screen size.",
       },
     ],
     related: ["/book-repair", "/tv-brand-repair"],

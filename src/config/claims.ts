@@ -16,7 +16,7 @@ export function trustItems(b: Business): Claim[] {
       show: b.claims.multiple_brands && b.brands.length > 1,
     },
     { title: "Transparent Estimates", text: "Estimate explained before any work", show: b.claims.transparent_estimates },
-    { title: "Customer Support", text: "Call, WhatsApp or enquiry form", show: b.claims.customer_support },
+    { title: "Customer Support", text: "Call, WhatsApp or SMS", show: b.claims.customer_support },
   ].filter((c) => c.show);
 }
 

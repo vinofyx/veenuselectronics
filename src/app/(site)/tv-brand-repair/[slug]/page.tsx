@@ -31,12 +31,13 @@ export default async function BrandPage({ params }: Params) {
     <LandingTemplate
       page={page}
       basePath="/tv-brand-repair"
+      variant="brand"
       breadcrumbs={[
         { name: "Brands We Repair", href: "/tv-brand-repair" },
         { name: page.title, href: `/tv-brand-repair/${page.slug}` },
       ]}
       notices={<BrandDisclaimer brand={page.brand} />}
-      formTitle={`${page.brand} TV repair enquiry`}
+      formTitle={`Book ${page.brand} TV repair`}
     />
   );
 }

@@ -1,24 +1,13 @@
-import { test, expect, type Page } from "@playwright/test";
-import { PNG_1PX, FAKE_JPG } from "./fixtures/make-images";
+import { test, expect } from "@playwright/test";
+import { FAKE_JPG } from "./fixtures/make-images";
 
-// Uses the real API + TEST Supabase project. Runs on one viewport to stay under the per-IP rate limit.
-test.describe.configure({ mode: "serial" });
-test.beforeEach(async ({ page: _page }, info) => {
-  test.skip(!process.env.E2E_WITH_BACKEND, "needs a TEST Supabase project (set E2E_WITH_BACKEND=1)");
-  test.skip(info.project.name !== "desktop" && info.project.name !== "android", "enquiry flow runs on desktop + android only");
-});
+// The public enquiry form was removed at the owner's request (Nov 2026). Customers book by
+// phone, WhatsApp or SMS; the enquiry API and admin remain and are covered by "API protection".
 
-const uniqueMobile = () => `9${String(Date.now()).slice(-9)}`;
-
-async function fillRequired(page: Page, mobile: string) {
-  await page.getByLabel("Your name").fill("E2E Test Customer");
-  await page.getByLabel("Mobile number").fill(mobile);
-  await page.getByLabel("Your area / locality").fill("E2E Test Area");
-}
-
-test("full customer journey: home -> TV repair -> brand -> problem -> enquiry with photo -> success -> WhatsApp", async ({ page }) => {
+test("customer journey: home -> TV repair -> brand -> problem -> book on WhatsApp (no form)", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop" && info.project.name !== "android", "journey runs on desktop + android only");
   await page.goto("/");
-  await page.getByRole("link", { name: /LED TV Repair/ }).first().click();
+  await page.locator('main a[href="/tv-repair/led-tv-repair"]').first().click();
   await expect(page).toHaveURL(/\/tv-repair\/led-tv-repair/);
 
   await page.goto("/tv-brand-repair/samsung-tv-repair");
@@ -26,66 +15,26 @@ test("full customer journey: home -> TV repair -> brand -> problem -> enquiry wi
 
   await page.goto("/tv-problems/tv-sound-but-no-picture");
   await expect(page.getByText(/please do not open your TV/i)).toBeVisible();
+  await expect(page.locator("form")).toHaveCount(0);
 
-  const form = page.locator("#enquiry");
-  await form.scrollIntoViewIfNeeded();
-  await fillRequired(page, uniqueMobile());
-  await expect(page.getByLabel("Problem", { exact: true })).toHaveValue("Sound But No Picture"); // pre-filled from the page
-  await page.getByLabel("Equipment").selectOption("LED TV");
-  await page.getByRole("button", { name: /Add more details/ }).click();
-  await page.getByLabel("Brand").selectOption("Samsung");
-  await page.getByLabel("Model number").fill("UA43T5310");
-  await page.locator("input[type=file]").setInputFiles({ name: "screen.png", mimeType: "image/png", buffer: PNG_1PX });
-  await expect(page.getByAltText("Selected photo 1")).toBeVisible();
-  await page.getByRole("checkbox").check();
-  await page.waitForTimeout(1600); // real users take longer than the anti-bot minimum
-  await page.getByRole("button", { name: "Submit Repair Enquiry" }).click();
-
-  await expect(page.getByText("Enquiry received - thank you!")).toBeVisible({ timeout: 15_000 });
-  const id = await page.locator("strong.font-mono").innerText();
-  expect(id).toMatch(/^VE-\d{6}-\d{4,}$/);
-  await expect(page.getByText(/not a confirmed appointment/)).toBeVisible();
-
-  const wa = page.getByRole("link", { name: /Share details on WhatsApp/ });
-  if (await wa.count()) {
-    const href = await wa.getAttribute("href");
-    const text = decodeURIComponent(href!.split("text=")[1]);
-    expect(href).toMatch(/^https:\/\/wa\.me\/\d{10,15}\?text=/);
-    expect(text).toContain(`Enquiry ID: ${id}`);
-    expect(text).toContain("Brand: Samsung");
-    expect(text).toContain("Model: UA43T5310");
-  }
+  const wa = page.locator("#enquiry").getByRole("link", { name: /Book on WhatsApp/ });
+  test.skip((await wa.count()) === 0, "no WhatsApp configured");
+  const href = (await wa.getAttribute("href"))!;
+  expect(href).toMatch(/^https:\/\/wa\.me\/\d{10,15}\?text=/);
+  expect(decodeURIComponent(href.split("text=")[1])).toContain("I would like to request a repair");
 });
 
-test("invalid mobile and missing fields show errors and do not submit", async ({ page }) => {
-  await page.goto("/book-repair");
-  await page.getByRole("button", { name: "Submit Repair Enquiry" }).click();
-  await expect(page.getByText("Please enter your name")).toBeVisible();
-  await expect(page.getByText(/valid 10-digit Indian mobile/)).toBeVisible();
-  await expect(page.getByText(/Please agree/)).toBeVisible();
-  await page.getByLabel("Mobile number").fill("12345");
-  await page.getByRole("button", { name: "Submit Repair Enquiry" }).click();
-  await expect(page.getByText(/valid 10-digit Indian mobile/)).toBeVisible();
-});
+// API tests use the real API + a TEST Supabase project, on one viewport to stay under the per-IP rate limit.
+test.describe.configure({ mode: "serial" });
 
-test("duplicate submission returns the same enquiry number", async ({ page }) => {
-  const mobile = uniqueMobile();
-  const submit = async () => {
-    await page.goto("/book-repair");
-    await fillRequired(page, mobile);
-    await page.getByRole("checkbox").check();
-    await page.waitForTimeout(1600);
-    await page.getByRole("button", { name: "Submit Repair Enquiry" }).click();
-    await expect(page.locator("strong.font-mono")).toBeVisible({ timeout: 15_000 });
-    return page.locator("strong.font-mono").innerText();
-  };
-  const first = await submit();
-  const second = await submit();
-  expect(second).toBe(first);
-  await expect(page.getByText("We already have your enquiry")).toBeVisible();
-});
+const uniqueMobile = () => `9${String(Date.now()).slice(-9)}`;
 
 test.describe("API protection", () => {
+  test.beforeEach(async ({ page: _page }, info) => {
+    test.skip(!process.env.E2E_WITH_BACKEND, "needs a TEST Supabase project (set E2E_WITH_BACKEND=1)");
+    test.skip(info.project.name !== "desktop", "API tests run once");
+  });
+
   test("rejects cross-site posts", async ({ request }) => {
     const res = await request.post("/api/enquiries", { headers: { origin: "https://evil.example" }, multipart: { customer_name: "x" } });
     expect(res.status()).toBe(403);

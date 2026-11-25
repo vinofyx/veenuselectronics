@@ -28,6 +28,7 @@ export default async function TvProblemPage({ params }: Params) {
     <LandingTemplate
       page={page}
       basePath="/tv-problems"
+      variant="problem"
       breadcrumbs={[
         { name: "TV Problems", href: "/tv-problems" },
         { name: page.title, href: `/tv-problems/${page.slug}` },

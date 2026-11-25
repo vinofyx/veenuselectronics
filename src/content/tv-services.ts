@@ -118,7 +118,7 @@ export const tvServices: LandingPage[] = [
     faqs: [
       {
         q: "How do I know if my TV is LCD or LED?",
-        a: "Check the model sticker on the back or the user manual. LED TVs are generally slimmer. If you are unsure, just choose 'LCD TV' or 'Other' on the enquiry form and share the model number - we will work it out.",
+        a: "Check the model sticker on the back or the user manual. LED TVs are generally slimmer. If you are unsure, just share the model number when you contact us - we will work it out.",
       },
       {
         q: "Can an old LCD TV still be repaired?",
@@ -276,7 +276,7 @@ export const tvServices: LandingPage[] = [
     faqs: [
       {
         q: "Is QLED the same as OLED?",
-        a: "No. QLED is an LED-backlit LCD TV with a quantum-dot colour layer. OLED has no backlight. The repairs are quite different, so please select the correct type on the enquiry form if you know it.",
+        a: "No. QLED is an LED-backlit LCD TV with a quantum-dot colour layer. OLED has no backlight. The repairs are quite different, so please mention the correct type when you contact us if you know it.",
       },
       {
         q: "Why does my QLED TV have bright patches?",

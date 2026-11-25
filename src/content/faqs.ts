@@ -7,10 +7,6 @@ export function getGeneralFaqs(b: Business): Faq[] {
   const brandList = brands.length > 1 ? `${brands.slice(0, -1).join(", ")} and ${brands[brands.length - 1]}` : brands[0] ?? "most common brands";
   return [
   {
-    q: "Is submitting an enquiry the same as a confirmed appointment?",
-    a: "No. An enquiry tells us about your TV or device. A member of our team will call or WhatsApp you to discuss the problem and confirm a suitable time and service option.",
-  },
-  {
     q: "Do you charge for inspection?",
     a: b.inspectionCharges
       ? `${b.inspectionCharges.replace(/\.$/, "")}. We confirm the charge with you before any visit or work takes place.`
@@ -37,16 +33,12 @@ export function getGeneralFaqs(b: Business): Faq[] {
     a: "If your TV is under the manufacturer's warranty, contact the manufacturer first. Opening it elsewhere may affect that warranty.",
   },
   {
-    q: "What information should I share in the enquiry?",
-    a: "Your TV brand, model number (from the sticker on the back), screen size, a short description of the problem and, if possible, a photo of the screen. This helps us prepare and give you more accurate advice.",
+    q: "What should I tell you when I contact you?",
+    a: "Your TV brand, model number (from the sticker on the back), screen size and what the TV is doing. A photo or short video on WhatsApp helps.",
   },
   {
     q: "Is a cracked TV screen repairable?",
     a: "A physically cracked panel cannot be repaired - it has to be replaced. Panel replacement is often expensive, sometimes close to the price of a new TV, and depends on availability. We will tell you honestly whether it is worthwhile.",
-  },
-  {
-    q: "Should I try opening my TV to fix it?",
-    a: "No. TVs contain power-supply capacitors that can hold a dangerous charge even when unplugged, and the panel is easily damaged. Please leave internal repairs to trained technicians.",
   },
   {
     q: "Do you repair devices other than TVs?",

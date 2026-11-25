@@ -89,7 +89,7 @@ test.describe("responsive conversion elements", () => {
 
   test("hero headline and primary CTA are above the fold", async ({ page }) => {
     await page.goto("/");
-    const cta = page.getByRole("link", { name: /Book TV Repair/ }).first();
+    const cta = page.getByRole("link", { name: /Book (TV )?Repair/ }).first();
     const box = await cta.boundingBox();
     expect(box!.y).toBeLessThan(page.viewportSize()!.height);
   });

@@ -1,5 +1,6 @@
 node_modules/
 .next/
+.next-prod/
 out/
 build/
 .env*
@@ -15,3 +16,5 @@ ci-logs/
 backups/
 setup/*.bundle
 setup/commit-id.txt
+setup/*.log
+scratch/

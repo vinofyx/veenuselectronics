@@ -18,6 +18,8 @@ import {
   serviceTypes,
   telHref,
   whatsappHref,
+  smsHref,
+  allSms,
 } from "../../src/config/business";
 import { businessFormToObject, businessSettingsSchema, toE164, toWhatsAppDigits } from "../../src/lib/business-validation";
 import { trustItems, whyChooseItems } from "../../src/config/claims";
@@ -82,6 +84,15 @@ describe("WhatsApp links", () => {
     assert.ok(href.startsWith("https://wa.me/919876543210?text="));
     assert.equal(decodeURIComponent(href.split("text=")[1]), "Enquiry ID: VE-261123-1001\nBrand: LG & Sony?");
     assert.ok(!href.includes("\n") && !href.includes(" "));
+  });
+});
+
+describe("SMS links", () => {
+  it("generates sms: protocol link with encoded body", () => {
+    const b = mergeBusiness(envBusiness(), { phone: "+916300473113" });
+    const href = smsHref(b, "Hello, I want to book a repair");
+    assert.ok(href.startsWith("sms:+916300473113?body="));
+    assert.equal(decodeURIComponent(href.split("body=")[1]), "Hello, I want to book a repair");
   });
 });
 

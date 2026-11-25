@@ -33,7 +33,7 @@ test.describe("Call and WhatsApp buttons", () => {
 
   test("booking page offers WhatsApp booking with the repair-request template", async ({ page }) => {
     await page.goto("/book-repair");
-    const wa = page.getByRole("link", { name: /Book on WhatsApp/ });
+    const wa = page.getByRole("link", { name: /Book on WhatsApp/ }).first();
     test.skip((await wa.count()) === 0, "no WhatsApp configured");
     const text = decodeURIComponent((await wa.getAttribute("href"))!.split("text=")[1]);
     expect(text).toContain("I would like to request a repair");
@@ -47,34 +47,50 @@ test.describe("Call and WhatsApp buttons", () => {
 });
 
 test.describe("contact and booking pages", () => {
-  test("contact page shows the enquiry form and contact details card", async ({ page }) => {
+  test("contact page shows contact details and direct booking actions, with no enquiry form", async ({ page }) => {
     await page.goto("/contact-us");
     await expect(page.locator("h1")).toHaveText("Contact Us");
     await expect(page.getByRole("heading", { name: "Contact information" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Submit Repair Enquiry" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Talk to a technician" })).toBeVisible();
+    // The written enquiry form was removed at the owner's request (Nov 2026)
+    await expect(page.locator("form")).toHaveCount(0);
   });
 
-  test("booking form fields are usable and the form fits the screen", async ({ page }) => {
+  test("booking page has no form and offers direct call, whatsapp, and sms options", async ({ page }) => {
     await page.goto("/book-repair");
-    for (const label of ["Your name", "Mobile number", "Your area / locality", "Equipment"]) {
-      await expect(page.getByLabel(label)).toBeVisible();
-    }
-    await expect(page.getByLabel("Problem", { exact: true })).toBeVisible();
-    const form = await page.locator("form").first().boundingBox();
-    expect(form!.x + form!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+    // Verify NO form is present on the page
+    await expect(page.locator("form")).toHaveCount(0);
+
+    // Verify direct Call links inside main content
+    const callLinks = page.locator('main a[href^="tel:"]');
+    await expect(callLinks.first()).toBeVisible();
+
+    // Verify direct WhatsApp links inside main content
+    const waLinks = page.locator('main a[href^="https://wa.me/"]');
+    await expect(waLinks.first()).toBeVisible();
+
+    // Verify direct SMS links inside main content
+    const smsLinks = page.locator('main a[href^="sms:"]');
+    await expect(smsLinks.first()).toBeVisible();
   });
 });
 
 test.describe("screenshots", () => {
   for (const [name, url] of [
     ["home", "/"],
-    ["booking", "/book-repair"],
+    ["tv-repair", "/tv-repair"],
+    ["tv-problems", "/tv-problems"],
+    ["electronics-repair", "/electronics-repair"],
+    ["tv-brand-repair", "/tv-brand-repair"],
+    ["about-us", "/about-us"],
+    ["contact-us", "/contact-us"],
+    ["book-repair", "/book-repair"],
   ] as const) {
     test(`${name} page screenshot`, async ({ page }, info) => {
       await page.goto(url);
       await page.waitForLoadState("networkidle");
       await page.screenshot({
-        path: path.join("test-results", "screenshots", `${info.project.name}-${name}.png`),
+        path: path.join("docs", "screenshots", `${info.project.name}-${name}.png`),
         fullPage: true,
       });
     });

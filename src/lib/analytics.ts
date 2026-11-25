@@ -12,6 +12,7 @@ declare global {
 export type TrackEvent =
   | "click_call"
   | "click_whatsapp"
+  | "click_sms"
   | "click_book_repair"
   | "enquiry_submit_attempt"
   | "enquiry_submit_success"

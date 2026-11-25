@@ -9,10 +9,11 @@ export default function SiteError({ error, reset }: { error: Error & { digest?: 
     console.error(error);
   }, [error]);
   return (
-    <section className="grid min-h-[60vh] place-items-center px-4 py-16">
+    <section className="grid min-h-[60vh] place-items-center px-5 py-20">
       <div className="max-w-md text-center">
-        <h1 className="text-2xl font-bold">Something went wrong</h1>
-        <p className="mt-3 text-slate-600">This page could not be loaded right now. Please try again, or contact us directly.</p>
+        <p className="eyebrow mb-3 justify-center">Temporary problem</p>
+        <h1 className="text-display-md">Something went wrong</h1>
+        <p className="mt-4 text-[16.5px] leading-relaxed text-ink-muted">This page could not be loaded right now. Please try again, or contact us directly.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button type="button" onClick={reset} className="btn-primary">Try again</button>
           <Link href="/contact-us" className="btn-outline">Contact us</Link>

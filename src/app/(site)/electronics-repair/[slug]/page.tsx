@@ -5,7 +5,6 @@ import { buildMetadata } from "@/lib/seo";
 import { getBusiness } from "@/lib/business";
 import { isPathOffered } from "@/config/business";
 import { LandingTemplate } from "@/components/LandingTemplate";
-import { ContactCard } from "@/components/ContactCard";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -32,11 +31,11 @@ export default async function ElectronicsPage({ params }: Params) {
     <LandingTemplate
       page={page}
       basePath="/electronics-repair"
+      variant="electronics"
       breadcrumbs={[
         { name: "Other Electronics", href: "/electronics-repair" },
         { name: page.title, href: `/electronics-repair/${page.slug}` },
       ]}
-      extra={<ContactCard />}
     />
   );
 }

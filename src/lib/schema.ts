@@ -5,31 +5,51 @@ import type { Faq } from "@/content/types";
 /** LocalBusiness schema. Only includes configured fields - nothing invented, no ratings. */
 export function localBusinessSchema(b: Business) {
   const a = b.address;
+  const street = [a.doorNumber, a.street].filter(Boolean).join(", ");
   const data: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
+    additionalType: "https://schema.org/ElectronicsRepair",
     "@id": absoluteUrl("/#business"),
     name: b.name,
-    description: `${site.tagline} - LED, LCD, Smart, OLED and QLED TV repair.`,
+    description: `${site.tagline} - LED, LCD, Smart, OLED and QLED TV repair services.`,
     url: site.url,
     image: b.logoUrl || absoluteUrl("/og-image.png"),
-    logo: b.logoUrl || absoluteUrl("/icon.svg"),
-    knowsAbout: ["TV repair", "LED TV repair", "Smart TV repair", "TV backlight repair", "TV motherboard repair", "TV screen repair"],
+    logo: b.logoUrl || absoluteUrl("/brand/veenus-logo.png"),
+    knowsAbout: [
+      "TV repair",
+      "LED TV repair",
+      "Smart TV repair",
+      "OLED TV repair",
+      "QLED TV repair",
+      "TV backlight repair",
+      "TV motherboard repair",
+      "TV screen repair",
+      "Home theatre repair",
+      "Speaker repair",
+      "Amplifier repair",
+    ],
   };
-  if (hasPhone(b)) data.telephone = b.phone;
+  if (hasPhone(b)) {
+    data.telephone = b.phoneSecondary ? [b.phone, b.phoneSecondary] : b.phone;
+  }
   if (b.email) data.email = b.email;
   if (hasAddress(b) || a.city) {
     data.address = {
       "@type": "PostalAddress",
-      ...(a.street ? { streetAddress: a.street } : {}),
-      ...(a.locality || a.city ? { addressLocality: a.locality || a.city } : {}),
-      ...(a.state ? { addressRegion: a.state } : {}),
-      ...(a.postcode ? { postalCode: a.postcode } : {}),
+      ...(street ? { streetAddress: street } : {}),
+      ...(a.locality ? { addressLocality: a.locality } : a.city ? { addressLocality: a.city } : {}),
+      ...(a.city && a.locality ? { addressRegion: a.state || a.city } : a.state ? { addressRegion: a.state } : {}),
+      ...(a.postcode ? { postalCode: a.postcode.replace(/^PIN\s*/i, "") } : {}),
       addressCountry: a.country,
     };
   }
   if (hasGeo(b)) data.geo = { "@type": "GeoCoordinates", latitude: b.geo.lat, longitude: b.geo.lng };
-  if (b.mapsUrl) data.hasMap = b.mapsUrl;
+  if (b.mapsUrl) {
+    data.hasMap = b.mapsUrl;
+  } else if (hasAddress(b)) {
+    data.hasMap = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([street, a.locality, a.postcode, "India"].filter(Boolean).join(", "))}`;
+  }
   if (a.city) data.areaServed = { "@type": "City", name: a.city };
   // aggregateRating intentionally omitted. Never add ratings that are not real and verifiable.
   return data;
@@ -42,7 +62,7 @@ export function organizationSchema(b: Business) {
     "@id": absoluteUrl("/#organization"),
     name: b.name,
     url: site.url,
-    logo: b.logoUrl || absoluteUrl("/icon.svg"),
+    logo: b.logoUrl || absoluteUrl("/brand/veenus-logo.png"),
     ...(hasPhone(b) ? { contactPoint: { "@type": "ContactPoint", telephone: b.phone, contactType: "customer service", areaServed: "IN" } } : {}),
   };
 }

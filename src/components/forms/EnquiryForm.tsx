@@ -4,7 +4,7 @@ import Link from "next/link";
 import { forwardRef, useEffect, useRef, useState, type ReactNode, type SelectHTMLAttributes } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, ImagePlus, Loader2, MessageCircle, Phone, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, ImagePlus, Loader2, Lock, MessageCircle, Phone, X } from "lucide-react";
 import {
   ALLOWED_PHOTO_TYPES,
   MAX_PHOTOS,
@@ -47,9 +47,11 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
   const startedAt = useRef<number>(Date.now());
   const formTop = useRef<HTMLDivElement>(null);
 
+  const inFlight = useRef(false);
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<EnquiryInput>({
     resolver: zodResolver(enquirySchema),
@@ -100,6 +102,17 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
   }
 
   async function onSubmit(data: EnquiryData) {
+    // Guard against double submission (double click / Enter twice) while a request is in flight.
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      await send(data);
+    } finally {
+      inFlight.current = false;
+    }
+  }
+
+  async function send(data: EnquiryData) {
     setServerError(null);
     track("enquiry_submit_attempt", { equipment: data.equipment_type, brand: data.brand });
 
@@ -152,9 +165,13 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
       .filter(Boolean)
       .join("\n");
     return (
-      <div ref={formTop} className="card p-6 sm:p-8" role="status" aria-live="polite">
-        <CheckCircle2 className="h-12 w-12 text-green-600" aria-hidden />
-        <h2 className="mt-4 text-2xl font-bold">{result.duplicate ? "We already have your enquiry" : "Enquiry received - thank you!"}</h2>
+      <div ref={formTop} className="card scroll-mt-28 overflow-hidden" role="status" aria-live="polite">
+        <div className="h-1.5 bg-emerald-500" aria-hidden />
+        <div className="p-6 sm:p-8">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
+          <CheckCircle2 className="h-8 w-8" aria-hidden />
+        </span>
+        <h2 className="mt-5 text-[24px]">{result.duplicate ? "We already have your enquiry" : "Enquiry received - thank you!"}</h2>
         {result.duplicate && (
           <p className="mt-2 text-slate-700">You sent the same request a few minutes ago, so we have not created a duplicate.</p>
         )}
@@ -184,18 +201,48 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
             </a>
           )}
         </div>
+        </div>
       </div>
     );
   }
 
   const err = (k: keyof EnquiryInput) => errors[k]?.message as string | undefined;
+  const inv = (k: keyof EnquiryInput) => (err(k) ? { "aria-invalid": true as const, "aria-describedby": `${k}-error` } : {});
+
+  // Progress across the four required items.
+  const values = watch(["customer_name", "mobile_number", "location", "consent"]);
+  const done = [
+    String(values[0] ?? "").trim().length >= 2,
+    /^(?:\+?91|0)?[6-9]\d{9}$/.test(String(values[1] ?? "").replace(/[\s-]/g, "")),
+    String(values[2] ?? "").trim().length >= 2,
+    Boolean(values[3]),
+  ].filter(Boolean).length;
+  const errorCount = Object.keys(errors).length;
 
   return (
-    <div ref={formTop} className="card p-5 sm:p-7">
-      {title && <h2 className="mb-1 text-xl font-bold sm:text-2xl">{title}</h2>}
-      <p className="mb-5 text-sm text-slate-600">
-        Fields marked <span className="text-red-600">*</span> are required. We&apos;ll contact you to confirm.
-      </p>
+    <div ref={formTop} className="card scroll-mt-28 overflow-hidden">
+      <div className="border-b border-brand-100 bg-brand-50/60 px-5 py-5 sm:px-7">
+        {title && <h2 className="text-[22px]">{title}</h2>}
+        <p className="mt-1 text-[14px] text-ink-muted">
+          Fields marked <span className="text-red-600">*</span> are required. We&apos;ll call you to confirm.
+        </p>
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-[12.5px] font-semibold">
+            <span className="text-brand-800">Required details</span>
+            <span className={done === 4 ? "text-emerald-600" : "text-ink-muted"}>{done} of 4 complete</span>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-brand-100" role="progressbar" aria-label="Required details completed" aria-valuemin={0} aria-valuemax={4} aria-valuenow={done}>
+            <div className={`h-full rounded-full transition-all duration-500 ${done === 4 ? "bg-emerald-500" : "bg-accent"}`} style={{ width: `${(done / 4) * 100}%` }} />
+          </div>
+        </div>
+      </div>
+      <div className="p-5 sm:p-7">
+      {errorCount > 0 && (
+        <p className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3.5 text-[14px] text-red-700" role="alert">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          Please check the {errorCount === 1 ? "highlighted field" : `${errorCount} highlighted fields`} below.
+        </p>
+      )}
       {/* zodResolver returns the parsed (transformed) values at runtime; the cast reflects that across react-hook-form versions. */}
       <form onSubmit={handleSubmit((values) => onSubmit(values as unknown as EnquiryData))} noValidate className="space-y-4">
         {/* Honeypot - hidden from humans */}
@@ -206,7 +253,7 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Your name" required error={err("customer_name")} id="customer_name">
-            <input id="customer_name" className="input" autoComplete="name" {...register("customer_name")} />
+            <input id="customer_name" className="input" autoComplete="name" {...inv("customer_name")} {...register("customer_name")} />
           </Field>
           <Field label="Mobile number" required error={err("mobile_number")} id="mobile_number">
             <input
@@ -216,26 +263,26 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
               inputMode="tel"
               autoComplete="tel"
               placeholder="10-digit mobile"
-              {...register("mobile_number")}
+              {...inv("mobile_number")} {...register("mobile_number")}
             />
           </Field>
         </div>
 
         <Field label="Your area / locality" required error={err("location")} id="location">
-          <input id="location" className="input" autoComplete="address-level3" placeholder="e.g. area, landmark" {...register("location")} />
+          <input id="location" className="input" autoComplete="address-level3" placeholder="e.g. area, landmark" {...inv("location")} {...register("location")} />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Equipment" error={err("equipment_type")} id="equipment_type">
-            <Select id="equipment_type" options={equipmentOptions(b)} {...register("equipment_type")} />
+            <Select id="equipment_type" {...inv("equipment_type")} options={equipmentOptions(b)} {...register("equipment_type")} />
           </Field>
           <Field label="Problem" error={err("problem")} id="problem">
-            <Select id="problem" options={PROBLEMS} {...register("problem")} />
+            <Select id="problem" {...inv("problem")} options={PROBLEMS} {...register("problem")} />
           </Field>
         </div>
 
         {!showMore && (
-          <button type="button" className="text-sm font-semibold text-brand underline-offset-2 hover:underline" onClick={() => setShowMore(true)}>
+          <button type="button" className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-dashed border-brand-200 text-[14px] font-semibold text-brand-700 transition-colors hover:border-brand-400 hover:bg-brand-50" onClick={() => setShowMore(true)}>
             + Add more details (brand, model, photos) - optional
           </button>
         )}
@@ -244,21 +291,21 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
           <>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Brand" error={err("brand")} id="brand">
-                <Select id="brand" options={brandOptions} {...register("brand")} />
+                <Select id="brand" {...inv("brand")} options={brandOptions} {...register("brand")} />
               </Field>
               <Field label="Screen size" error={err("screen_size")} id="screen_size">
-                <Select id="screen_size" options={SCREEN_SIZES} {...register("screen_size")} />
+                <Select id="screen_size" {...inv("screen_size")} options={SCREEN_SIZES} {...register("screen_size")} />
               </Field>
               <Field label="Model number" error={err("model_number")} id="model_number">
-                <input id="model_number" className="input" placeholder="From the sticker on the back" {...register("model_number")} />
+                <input id="model_number" className="input" placeholder="From the sticker on the back" {...inv("model_number")} {...register("model_number")} />
               </Field>
               {serviceOptions.length > 0 && (
                 <Field label="Preferred service" error={err("service_type")} id="service_type">
-                  <Select id="service_type" options={serviceOptions} {...register("service_type")} />
+                  <Select id="service_type" {...inv("service_type")} options={serviceOptions} {...register("service_type")} />
                 </Field>
               )}
               <Field label="Email" error={err("email")} id="email">
-                <input id="email" className="input" type="email" autoComplete="email" {...register("email")} />
+                <input id="email" className="input" type="email" autoComplete="email" {...inv("email")} {...register("email")} />
               </Field>
               <Field label="Preferred date" error={err("preferred_date")} id="preferred_date">
                 <input
@@ -266,7 +313,7 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
                   className="input"
                   type="date"
                   min={today}
-                  {...register("preferred_date")}
+                  {...inv("preferred_date")} {...register("preferred_date")}
                 />
               </Field>
             </div>
@@ -276,7 +323,7 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
                 rows={3}
                 className="input"
                 placeholder="What happens when you switch it on? Any blinking lights, sounds or error messages?"
-                {...register("problem_description")}
+                {...inv("problem_description")} {...register("problem_description")}
               />
             </Field>
 
@@ -298,7 +345,7 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
                   </div>
                 ))}
                 {photos.length < MAX_PHOTOS && (
-                  <label className="grid h-20 w-20 cursor-pointer place-items-center rounded-lg border-2 border-dashed border-brand-200 text-brand hover:border-brand hover:bg-brand-50">
+                  <label className="grid h-20 w-20 cursor-pointer place-items-center rounded-xl border-2 border-dashed border-brand-200 text-brand-600 transition-colors hover:border-accent hover:bg-accent-50">
                     <ImagePlus className="h-6 w-6" aria-hidden />
                     <span className="sr-only">Add photos</span>
                     <input
@@ -334,12 +381,16 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
         </div>
 
         {serverError && (
-          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
-            {serverError}
-          </p>
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-[14px] text-red-700" role="alert">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <div>
+              <p className="font-semibold">Your enquiry was not sent.</p>
+              <p className="mt-0.5">{serverError} Your details are still filled in - you can try again.</p>
+            </div>
+          </div>
         )}
 
-        <button type="submit" className="btn-accent w-full py-3.5 text-base" disabled={isSubmitting}>
+        <button type="submit" className="btn-accent min-h-[52px] w-full text-[16px]" disabled={isSubmitting} aria-busy={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> Sending...
@@ -348,8 +399,11 @@ export function EnquiryForm({ prefill, compact = false, title }: Props) {
             "Submit Repair Enquiry"
           )}
         </button>
-        <p className="text-center text-xs text-slate-500">An enquiry is not a confirmed appointment. We will call to confirm availability.</p>
+        <p className="flex items-center justify-center gap-1.5 text-center text-[12.5px] text-ink-muted">
+          <Lock className="h-3.5 w-3.5" aria-hidden /> An enquiry is not a confirmed appointment. We will call to confirm availability.
+        </p>
       </form>
+      </div>
     </div>
   );
 }
